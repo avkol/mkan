@@ -1,0 +1,106 @@
+// Шаги согласно видео урока по созданию приложения MEAN 
+
+Устанавливаем ангуляр: npm i @angular/cli -g
+Создаем новый проект в ангуляре: ng new mean
+- // На большом компе по адр: D:\Programming\Angular4\coding\mean
+- Ангуляр проект mean создан. У меня получилось: D:\Programming\Angular4\coding\mean\mean
+Заходим в папку с проектом (крайний mean) и вводим команду ng build ,чтобы получить dist версию файлов
+- Сделали как написано. В командной строке чего-то там мне написало. Надо полагать, что dist файл был создан. Идём дальше...
+В видео-уроке мне предлагается установить фрейм-ворк Express (в дальнейшем я попробую его поменять на Koa-2)
+нужно ввести: npm install express body-parser --save
+-- сделал как написано. В ком. строке сообщили, что установился: body-parser@1.18.2 и express@4.16.2
+В папочке mean\mean создаю файл server.js, в котором пишем:
+------------------------------------------------------------------
+      const express = require('express');
+      const bodyParser = require('body-parser');
+      const path = require('path');
+      const http = require('http');
+      const app = new express();
+
+      //API file for interacting with MongoDB
+      const api = require('./server/routes/api');
+
+      //Parsers
+      app.use(bodyParser.json());
+      app.use(bodyParser.urlencoded({extended:false}));
+
+      //Angular DIST output folder
+      app.use(express.static(path.join(__dirname, 'dist')));
+
+      //API location
+      app.use('/api', api);
+
+      //Send all other requests to the Angular app
+      app.get('*', (req, res) => {
+        res.sendFile(path.join(__dirname, 'dist/index.html'));
+      });
+
+      //Set port
+      const port = proсess.env.PORT || '3000';
+
+      app.set('port', port);
+
+      const server = http.createServer(app);
+
+      server.listen(port, () => {console.log(`Running on localhost:${port}`)});
+ ------------------------------------------------------------------------------------
+ **
+ Запускаем MongoDB на локальном компьютере. В моём случаше на большом компе это: D:\MongoDB\bin\mongod.exe --dbpath=D:\temp1\data
+ Запускаем шелл для работы с базой D:\MongoDB\bin\mongo
+ Открываем и тут же запускаем базу mean командой в шелл: use mean. Ответ базы: switched to db mean
+ Делаем запись в базу в несуществующую коллекцию users, которая тут же создается: db.users.insert({"name":"John Doe"})
+ 
+Возвращаемся в ком. строке в папку с нашим проектом и устанавливаем драйвер для МонгоДБ: npm install mongodb --save
+- установилось: mongodb@3.0.1
+В папке с проектом создаем папки и файл: ./server/routes/api.js
+------------------------------------------------------------------------
+      const express = require('express');
+      const router = express.Router();
+      const MongoClient = require('mongodb').MongoClient;
+      const ObjectID = require('mongodb').ObjectID;
+
+      //connect
+      const connection = (closure) => {
+        return NongoClient.connect('mongodb://localhost:27017/mean', (err, db) =>{
+          if(err) return console.log(err);
+
+          closure(db);
+        });
+      }; 
+
+      //Error handling
+      const sendError = (err, res) => {
+        response.status = 501;
+        response.message = typeof err == 'object'?err.message:err;
+        res.status(501).json(response);
+      };
+
+      //Response handling
+      let response = {
+        status:200,
+        data:[],
+        message:null
+      };
+
+      //Get users
+      router.get('/users', (req, res) => {
+        connection((db) =>{
+          db.collection('users')
+          .find()
+          .toArray()
+          .then((users) =>{
+            response.data = users;
+            res.json(response);
+          })
+          .catch((err) => {
+            sendError(err, res);
+          });
+        });
+      });
+
+      module.exports = router;
+-------------------------------------------------------
+Запускаем сервер: в папке проекта командной строки пишем: node server
+Получаем: Running on localhost:3000
+При вызове в адресной строке браузера http://localhost:3000/api открывается страничка Ангуляра, 
+а вот вызов http://localhost:3000/api/users приводит к ошибке: TypeError: db.collection is not a function
