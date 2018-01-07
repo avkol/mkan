@@ -1,5 +1,6 @@
 // Шаги согласно видео урока по созданию приложения MEAN 
 
+1.
 Устанавливаем ангуляр: npm i @angular/cli -g
 Создаем новый проект в ангуляре: ng new mean
 - // На большом компе по адр: D:\Programming\Angular4\coding\mean
@@ -9,6 +10,8 @@
 В видео-уроке мне предлагается установить фрейм-ворк Express (в дальнейшем я попробую его поменять на Koa-2)
 нужно ввести: npm install express body-parser --save
 -- сделал как написано. В ком. строке сообщили, что установился: body-parser@1.18.2 и express@4.16.2
+
+2.
 В папочке mean\mean создаю файл server.js, в котором пишем:
 ------------------------------------------------------------------
       const express = require('express');
@@ -52,6 +55,8 @@
  
 Возвращаемся в ком. строке в папку с нашим проектом и устанавливаем драйвер для МонгоДБ: npm install mongodb --save
 - установилось: mongodb@3.0.1
+
+3.
 В папке с проектом создаем папки и файл: ./server/routes/api.js
 ------------------------------------------------------------------------
       const express = require('express');
@@ -103,4 +108,57 @@
 Запускаем сервер: в папке проекта командной строки пишем: node server
 Получаем: Running on localhost:3000
 При вызове в адресной строке браузера http://localhost:3000/api открывается страничка Ангуляра, 
-а вот вызов http://localhost:3000/api/users приводит к ошибке: TypeError: db.collection is not a function
+(!!!) а вот вызов http://localhost:3000/api/users приводит к ошибке: TypeError: db.collection is not a function
+- причина проблемы найдена и устранена. Оказалось что в новой версии Монги аргументами NongoClient.connect() является
+-- просто урл (без названия базы), а вторым аргументом идеть объект client, и чтобы из него получить базу, 
+-- нужно брать из объекта client.db('название базы'), то есть: db = client.db('mean'), и дальше: db.collection('users').find().toArray()
+
+Теперь файл: ./server/routes/api.js выглядит так:
+const express = require('express');
+const router = express.Router();
+const MongoClient = require('mongodb').MongoClient;
+const ObjectID = require('mongodb').ObjectID;
+
+//connect
+const connection = (closure) => {
+	return MongoClient.connect('mongodb://localhost:27017', (err, client) =>{
+		if(err) return console.log(err);
+		
+		db = client.db('mean');
+		closure(db);
+	});
+}; 
+
+//Error handling
+const sendError = (err, res) => {
+	response.status = 501;
+	response.message = typeof err == 'object'?err.message:err;
+	res.status(501).json(response);
+};
+
+//Response handling
+let response = {
+	status:200,
+	data:[],
+	message:null
+};
+
+
+//Get users - вариант из урока, пока что закоментил, так как у меня он не работает. Попробую свой
+router.get('/users', (req, res) => {
+	connection((db) =>{
+		db.collection('users')
+		.find()
+		.toArray()		
+		.then((users) =>{
+			response.data = users;
+			res.json(response);
+		})
+		.catch((err) => {
+			sendError(err, res);
+		});
+	});
+});
+
+
+module.exports = router;
