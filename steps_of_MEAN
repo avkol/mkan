@@ -162,3 +162,95 @@ router.get('/users', (req, res) => {
 
 
 module.exports = router;
+----------------------------------------------------
+И если перейти по ссылке: http://localhost:3000/api/users
+получаем: {"status":200,"data":[{"_id":"5a4d04d7798833f794e426bb","name":"John Doe"}],"message":null}
+
+4. Теперь делаем сервис, чтобы данные из базы попадали в наш Ангуляр
+В командной строке ./mean/mean/ забиваем: ng g serviсe data и создаем ./data.service.ts
+- и дальше в этом файле:
+---------------------------------------------------------------------
+import { Injectable } from '@angular/core';
+
+import {Http, Headers, RequestOptions} from '@angular/http';
+import 'rxjs/add/operator/map';
+
+
+@Injectable()
+export class DataService {
+
+  result:any;
+  constructor(private _http:Http) {}
+	  
+   getUsers(){	  
+    return this._http.get("/api/users")
+	 .map(result => this.result = result.json().data);
+	 }
+}
+----------------------------------------------------------------------
+
+5. Коннектим сервис с app.component.ts
+----------------------------------------------------------------------
+import { Component } from '@angular/core';
+import {DataService} from './data.service';
+
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.css']
+})
+export class AppComponent {
+  
+  users:Array<any>;
+  constructor(private _dataService:DataService){
+	 this._dataService.getUsers()
+         .subscribe(res => this.users = res)	 
+  }
+}
+----------------------------------------------------------------------
+
+6. вносим изменения в app.module.ts
+----------------------------------------------------------------------
+import { BrowserModule } from '@angular/platform-browser';
+import { NgModule } from '@angular/core';
+
+import { AppComponent } from './app.component';
+import { TempComponent } from './temp/temp.component';
+
+import {HttpModule} from '@angular/http';
+import {DataService} from './data.service';
+
+@NgModule({
+  declarations: [
+    AppComponent,
+    TempComponent
+  ],
+  imports: [
+    BrowserModule,
+	HttpModule
+  ],
+  providers: [DataService],
+  bootstrap: [AppComponent]
+})
+export class AppModule { }
+--------------------------------------------------------------------
+
+7. Изменяем html - файл в app.component.html
+--------------------------------------------------------------------
+<!--The content below is only a placeholder and can be replaced.-->
+<div style="text-align:center">
+  <h1>
+    Our MongoDB is working!
+  </h1>
+ </div>
+<h2>List of users: </h2>
+<ul>
+  <li *ngFor="let user of users">
+      {{user.name}}
+  </li>
+</ul>
+--------------------------------------------------------------------
+
+8. Делаем ng build
+
+9. Запускаем: node start
